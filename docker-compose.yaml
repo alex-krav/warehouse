@@ -1,0 +1,71 @@
+version: '3'
+services:
+  postgres:
+    # https://hub.docker.com/_/postgres
+    image: postgres
+    restart: always
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=warehouse
+    volumes:
+      - postgres-data:/var/lib/postgresql
+
+  pgadmin: 
+    # https://hub.docker.com/r/dpage/pgadmin4
+    image: dpage/pgadmin4
+    restart: always
+    ports:
+     - 5050:80
+    environment:
+      # host=image, port, user, password 
+      # - PGADMIN_LISTEN_PORT=8081
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=password
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+
+
+  mysql:
+    # https://hub.docker.com/_/mysql
+    image: mysql 
+    #command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    ports:
+      - 6033:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: password
+      MYSQL_DATABASE: warehouse
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  phpmyadmin:
+    # https://hub.docker.com/_/phpmyadmin
+    image: phpmyadmin:5.0.4
+    restart: always
+    links:
+      - mysql
+    ports:
+      - 8081:80
+    environment:
+      # host=image, port, user, password 
+      - PMA_ARBITRARY=1
+      - PMA_HOST=mysql
+      - PMA_PORT=3306
+    volumes:
+      - phpmyadmin-data:/var/www/html
+
+
+volumes:
+  postgres-data:
+    driver: local
+  pgadmin-data:
+    driver: local
+  mysql-data:
+    driver: local
+  phpmyadmin-data:
+    driver: local

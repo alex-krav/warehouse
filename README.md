@@ -15,3 +15,8 @@
     server: mysql
     user: admin
     password: password
+
+## Run
+
+python3 src/window.py
+

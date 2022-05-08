@@ -17,8 +17,11 @@ class Category(BaseModel):
         constraints = [SQL('UNIQUE ("name" COLLATE NOCASE)')]
         table_name = 'categories'
 
-    def __str__(self):
+    def to_string(self):
         return 'Category[id={}, name={}]'.format(self.id, self.name)
+
+    def __str__(self):
+        return '{} {}'.format(self.name.replace(' ', '\ '), self.id)
 
 class Good(BaseModel):
     category = ForeignKeyField(Category, backref='goods')
@@ -41,9 +44,13 @@ class Good(BaseModel):
     def show_quantity(self):
         return '{} {}'.format(self.quantity, self.quantity_unit) 
 
-    def __str__(self):
+    def to_string(self):
         return 'Good[id={}, cat_id={}, name={}, qty={}, start={}, term={}, date={}]'.format(
             self.id, self.category.id, self.name, self.show_quantity(), self.show_start_date(), self.term, self.show_end_date())
+
+    def __str__(self):
+        qty_str = '{}\ {}'.format(self.quantity, self.quantity_unit.replace(' ', '\ '))
+        return '{} {} {} {} {} {}'.format(self.name.replace(' ', '\ '), qty_str, self.show_start_date(), self.show_end_date(), self.term, self.id)
 
 def main():
     logging.basicConfig(format='[%(asctime)s] ln:%(lineno)d %(levelname)s: %(message)s', datefmt='%I:%M:%s', level=logging.DEBUG)
@@ -63,6 +70,9 @@ def main():
     print(str(Category[2]))
     print()
     print(str(Good.select(Good,Category).where(Good.id==11).join(Category, JOIN.INNER).get()))
+
+    good = Good[11]
+    print(good)
 
     database.close()
 

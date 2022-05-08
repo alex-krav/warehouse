@@ -14,36 +14,41 @@ class CategoryService:
         query = Category.select().order_by(Category.name)
         return list(query)
 
+    def find(name: str) -> Category:
+        result = Category.select().where(Category.name==name.lower()).limit(1)
+        return result.get() if len(result) > 0 else None
+
+    def find_except(name: str, id: int) -> Category:
+        result = Category.select().where(Category.id != id).where(Category.name==name.lower()).limit(1)
+        return result.get() if len(result) > 0 else None
+
     def add(name: str) -> Category:
-        try:
-            if not name.strip():
-                raise ConstraintException("Name cannot be empty")
-            return Category.create(name=name.strip().lower())
-        except Exception as ex:
-            logging.error("Could not add category: " + str(ex))  
+        if not name.strip():
+            raise ConstraintException("Name cannot be empty")
+        return Category.create(name=name.strip().lower())
 
     def edit(id: int, name: str) -> bool:
-        try:
-            if not name.strip():
-                raise ConstraintException("Name cannot be empty")
-            category = Category[id]
-            category.name = name.strip().lower()
-            category.save()
-            return True
-        except Exception as ex:
-            logging.error("Could not update category: " + str(ex))
-            return False
+        if not name.strip():
+            raise ConstraintException("Name cannot be empty")
+        category = Category[id]
+        category.name = name.strip().lower()
+        category.save()
+        return True
 
     def delete(id: int) -> bool:
+        category = Category[id]
+        goods_qty = 0
+
         try:
-            category = Category[id]
-            if len(category.goods):
-                raise ConstraintException("There are goods with this category")
-            category.delete_instance()
-            return True
-        except Exception as ex:
-            logging.error("Could not delete category: " + str(ex))
-            return False
+            goods_qty = len(category.goods)
+        except:
+            pass
+
+        if goods_qty:    
+            raise ConstraintException("В цій категорії є товари!")
+
+        category.delete_instance()
+        return True
 
 class GoodService:
     def list(cat_id: int) -> list(Good):
@@ -55,87 +60,78 @@ class GoodService:
 
     def add(category_id: int, name: str, quantity: int, quantity_unit: str, 
             start_date: str, term: int, end_date: str) -> Good:
-        try:
-            category = Category[category_id]
 
-            if not name.strip():
-                raise ConstraintException("Name cannot be empty")
-            if int(quantity) < 1:
-                raise ConstraintException("Quantity should be positive integer")
-            if not quantity_unit.strip():
-                raise ConstraintException("Quantity unit cannot be empty")
+        category = Category[category_id]
 
-            if not start_date.strip():
-                raise ConstraintException("Start date cannot be empty")
-            year,month,day = start_date.split('-')
-            start_date_datetime = datetime(int(year), int(month), int(day), tzinfo=timezone.utc)
-            start_date_timestamp = int(time.mktime(start_date_datetime.timetuple()))
+        if not name.strip():
+            raise ConstraintException("Name cannot be empty")
+        if int(quantity) < 1:
+            raise ConstraintException("Quantity should be positive integer")
+        if not quantity_unit.strip():
+            raise ConstraintException("Quantity unit cannot be empty")
+
+        if not start_date.strip():
+            raise ConstraintException("Start date cannot be empty")
+        year,month,day = start_date.split('-')
+        start_date_datetime = datetime(int(year), int(month), int(day), tzinfo=timezone.utc)
+        start_date_timestamp = int(time.mktime(start_date_datetime.timetuple()))
+        
+        if end_date and end_date.strip():                
+            year,month,day = end_date.split('-')
+            end_date_datetime = datetime(int(year), int(month), int(day), tzinfo=timezone.utc)
+            end_date_timestamp = int(time.mktime(end_date_datetime.timetuple()))
             
-            if end_date and end_date.strip():                
-                year,month,day = end_date.split('-')
-                end_date_datetime = datetime(int(year), int(month), int(day), tzinfo=timezone.utc)
-                end_date_timestamp = int(time.mktime(end_date_datetime.timetuple()))
-                
-                if (start_date_timestamp >= end_date_timestamp):
-                    raise ConstraintException("End date should be more than start date")
-                term = int((end_date_timestamp - start_date_timestamp) / 86_400)
-            elif term and int(term) > 0:
-                end_date_timestamp = start_date_timestamp + int(term) * 86_400
-            else:
-                raise ConstraintException("You should provide either term or end date")
+            if (start_date_timestamp >= end_date_timestamp):
+                raise ConstraintException("End date should be more than start date")
+            term = int((end_date_timestamp - start_date_timestamp) / 86_400)
+        elif term and int(term) > 0:
+            end_date_timestamp = start_date_timestamp + int(term) * 86_400
+        else:
+            raise ConstraintException("You should provide either term or end date")
 
-            return Good.create(category=category, 
-                               name=name.strip(), quantity=int(quantity), quantity_unit=quantity_unit.strip(),
-                               start_date=start_date_timestamp, end_date=end_date_timestamp, term=int(term))
-        except Exception as ex:
-            logging.error("Could not add category: " + str(ex))  
+        return Good.create(category=category, 
+                            name=name.strip(), quantity=int(quantity), quantity_unit=quantity_unit.strip(),
+                            start_date=start_date_timestamp, end_date=end_date_timestamp, term=int(term))
 
     def edit(id: int, category_id: int=None, name: str=None, quantity: int=None, 
              quantity_unit: str=None, term: int=None, end_date: str=None) -> bool:
-        try:
-            good = Good[id]
-            if category_id:
-                category = Category[category_id]
-                if category:
-                    good.category = category
 
-            if name and name.strip():
-                good.name = name.strip()
-            if quantity and int(quantity) > 0:
-                good.quantity = int(quantity)
-            if quantity_unit and quantity_unit.strip():
-                good.quantity_unit = quantity_unit.strip()
-            
-            if end_date and end_date.strip():
-                year,month,day = end_date.split('-')
-                end_date_datetime = datetime(int(year), int(month), int(day), tzinfo=timezone.utc)
-                end_date_timestamp = int(time.mktime(end_date_datetime.timetuple()))
+        good = Good[id]
+        if category_id:
+            category = Category[category_id]
+            if category:
+                good.category = category
 
-                if (good.start_date >= end_date_timestamp):
-                    raise ConstraintException("End date should be more than start date")
-                term = int((end_date_timestamp - good.start_date) / 86_400)
+        if name and name.strip():
+            good.name = name.strip()
+        if quantity and int(quantity) > 0:
+            good.quantity = int(quantity)
+        if quantity_unit and quantity_unit.strip():
+            good.quantity_unit = quantity_unit.strip()
+        
+        if end_date and end_date.strip():
+            year,month,day = end_date.split('-')
+            end_date_datetime = datetime(int(year), int(month), int(day), tzinfo=timezone.utc)
+            end_date_timestamp = int(time.mktime(end_date_datetime.timetuple()))
 
-                good.end_date = end_date_timestamp
-                good.term = term
-            elif term and int(term) > 0:
-                end_date_timestamp = good.start_date + int(term) * 86_400
-                good.end_date = end_date_timestamp
-                good.term = int(term)
-            
-            good.save()
-            return True
-        except Exception as ex:
-            logging.error("Could not update good: " + str(ex))
-            return False
+            if (good.start_date >= end_date_timestamp):
+                raise ConstraintException("End date should be more than start date")
+            term = int((end_date_timestamp - good.start_date) / 86_400)
+
+            good.end_date = end_date_timestamp
+            good.term = term
+        elif term and int(term) > 0:
+            end_date_timestamp = good.start_date + int(term) * 86_400
+            good.end_date = end_date_timestamp
+            good.term = int(term)
+        
+        good.save()
+        return True
 
     def delete(id: int) -> bool:
-        try:
-            good = Good[id]
-            good.delete_instance()
-            return True
-        except Exception as ex:
-            logging.error("Could not delete good: " + str(ex))
-            return False 
+        good = Good[id]
+        good.delete_instance()
+        return True
 
 class ExportService:
     def export_sqlite_postgres():
@@ -156,3 +152,11 @@ if __name__ == "__main__":
     print()
 
     print(str(GoodService.get(11)))
+    print()
+
+    cat = CategoryService.find_except('продукти харчування', 1)
+    print(cat)
+
+    print(len(CategoryService.list()))
+
+    CategoryService.delete(1)

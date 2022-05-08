@@ -4,11 +4,13 @@ import logging
 
 database = SqliteDatabase('/home/alex-krav/projects/warehouse/data/warehouse.db')
 
+
 class BaseModel(Model):
     id = PrimaryKeyField()
 
     class Meta:
         database = database
+
 
 class Category(BaseModel):
     name = CharField()
@@ -22,6 +24,7 @@ class Category(BaseModel):
 
     def __str__(self):
         return '{} {}'.format(self.name.replace(' ', '\ '), self.id)
+
 
 class Good(BaseModel):
     category = ForeignKeyField(Category, backref='goods')
@@ -42,7 +45,7 @@ class Good(BaseModel):
         return datetime.fromtimestamp(self.end_date).strftime('%Y-%m-%d')
         
     def show_quantity(self):
-        return '{} {}'.format(self.quantity, self.quantity_unit) 
+        return '{} {}'.format(self.quantity, self.quantity_unit)
 
     def to_string(self):
         return 'Good[id={}, cat_id={}, name={}, qty={}, start={}, term={}, date={}]'.format(
@@ -51,6 +54,7 @@ class Good(BaseModel):
     def __str__(self):
         qty_str = '{}\ {}'.format(self.quantity, self.quantity_unit.replace(' ', '\ '))
         return '{} {} {} {} {} {}'.format(self.name.replace(' ', '\ '), qty_str, self.show_start_date(), self.show_end_date(), self.term, self.id)
+
 
 def main():
     logging.basicConfig(format='[%(asctime)s] ln:%(lineno)d %(levelname)s: %(message)s', datefmt='%I:%M:%s', level=logging.DEBUG)
@@ -63,18 +67,19 @@ def main():
             print(" "*4, good.name)
     print()
         
-    for good in Good.select(Good,Category).join(Category, JOIN.INNER).order_by(Good.name):
+    for good in Good.select(Good, Category).join(Category, JOIN.INNER).order_by(Good.name):
         print(good.name, "-", good.category.name)
     print()
 
     print(str(Category[2]))
     print()
-    print(str(Good.select(Good,Category).where(Good.id==11).join(Category, JOIN.INNER).get()))
+    print(str(Good.select(Good, Category).where(Good.id == 11).join(Category, JOIN.INNER).get()))
 
     good = Good[11]
     print(good)
 
     database.close()
+
 
 if __name__ == "__main__":
     main()

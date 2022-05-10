@@ -2,6 +2,9 @@ from model import *
 import logging
 import time
 from datetime import datetime, timezone
+from model import pg_db
+from model import Category, Good
+from playhouse.shortcuts import model_to_dict
 
 
 class ConstraintException(Exception):
@@ -47,7 +50,7 @@ class CategoryService:
         except Exception as ex:
             logging.error(ex)
 
-        if goods_qty:  
+        if goods_qty:
             raise ConstraintException("В цій категорії є вантажі!")
 
         category.delete_instance()
@@ -62,7 +65,7 @@ class GoodService:
     def get(id: int) -> Good:
         return Good.select(Good, Category).where(Good.id == id).join(Category, JOIN.INNER).get()
 
-    def add(category_id: int, name: str, quantity: int, quantity_unit: str, 
+    def add(category_id: int, name: str, quantity: int, quantity_unit: str,
             start_date: str, term: int, end_date: str) -> Good:
 
         category = Category[category_id]
@@ -76,28 +79,21 @@ class GoodService:
 
         if not start_date.strip():
             raise ConstraintException("Початкова дата не може бути пустою")
-        year, month, day = start_date.split('-')
-        start_date_datetime = datetime(int(year), int(month), int(day), tzinfo=timezone.utc)
-        start_date_timestamp = int(time.mktime(start_date_datetime.timetuple()))
-        
-        if end_date and end_date.strip():                
-            year, month, day = end_date.split('-')
-            end_date_datetime = datetime(int(year), int(month), int(day), tzinfo=timezone.utc)
-            end_date_timestamp = int(time.mktime(end_date_datetime.timetuple()))
-            
-            if (start_date_timestamp >= end_date_timestamp):
-                raise ConstraintException("Кінцева дата має бути більше за початкову дату")
-            term = int((end_date_timestamp - start_date_timestamp) / 86_400)
-        elif term and int(term) > 0:
-            end_date_timestamp = start_date_timestamp + int(term) * 86_400
-        else:
-            raise ConstraintException("Введіть термін зберігання або кінцеву дату")
 
-        return Good.create(category = category,
-                           name = name.strip(), quantity = int(quantity), quantity_unit = quantity_unit.strip(),
-                           start_date = start_date_timestamp, end_date = end_date_timestamp, term = int(term))
+        if not end_date.strip():
+            raise ConstraintException("Кінцева не може бути пустою")
 
-    def edit(id: int, category_id: int = None, name: str = None, quantity: int = None, 
+        start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+
+        if start_date_obj >= end_date_obj:
+            raise ConstraintException("Кінцева дата має бути більше за початкову дату")
+
+        return Good.create(category=category,
+                           name=name.strip(), quantity=int(quantity), quantity_unit=quantity_unit.strip(),
+                           start_date=start_date, end_date=end_date, term=int(term))
+
+    def edit(id: int, category_id: int = None, name: str = None, quantity: int = None,
              quantity_unit: str = None, term: int = None, end_date: str = None) -> bool:
 
         good = Good[id]
@@ -112,23 +108,17 @@ class GoodService:
             good.quantity = int(quantity)
         if quantity_unit and quantity_unit.strip():
             good.quantity_unit = quantity_unit.strip()
-        
-        if end_date and end_date.strip():
-            year, month, day = end_date.split('-')
-            end_date_datetime = datetime(int(year), int(month), int(day), tzinfo=timezone.utc)
-            end_date_timestamp = int(time.mktime(end_date_datetime.timetuple()))
-
-            if (good.start_date >= end_date_timestamp):
-                raise ConstraintException("Кінцева дата має бути більше за початкову дату")
-            term = int((end_date_timestamp - good.start_date) / 86_400)
-
-            good.end_date = end_date_timestamp
-            good.term = term
-        elif term and int(term) > 0:
-            end_date_timestamp = good.start_date + int(term) * 86_400
-            good.end_date = end_date_timestamp
+        if term and int(term) > 0:
             good.term = int(term)
-        
+        if end_date and end_date.strip():
+            start_date_obj = good.start_date
+            end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+
+            if start_date_obj >= end_date_obj:
+                raise ConstraintException("Кінцева дата має бути більше за початкову дату")
+
+            good.end_date = end_date
+
         good.save()
         return True
 
@@ -139,15 +129,40 @@ class GoodService:
 
 
 class ExportService:
+    @staticmethod
     def export_sqlite_postgres():
         pass
 
+    @staticmethod
     def export_postgres_mysql():
-        pass
+        for name in pg_db.get_tables():
+            cursor = pg_db.execute_sql(f'DELETE FROM {name}')
+            print(cursor.description)
+
+        for category in Category.select():
+            category_dict = model_to_dict(category)
+            id = category_dict.get('id')
+            name = category_dict.get('name')
+            pg_db.execute_sql('INSERT INTO categories (id, name) VALUES (%s, %s)', [id, name])
+            for good in category.goods.dicts():
+                id = good.get('id')
+                category_id = good.get('category')
+                name = good.get('name')
+                quantity = good.get('quantity')
+                quantity_unit = good.get('quantity_unit')
+                term = good.get('term')
+                start_date = good.get('start_date')
+                end_date = good.get('end_date')
+
+                pg_db.execute_sql("""INSERT INTO goods 
+                                  (id,category_id,name,quantity,quantity_unit,term,start_date,end_date) 
+                                  VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+                                  [id, category_id, name, quantity, quantity_unit, term, end_date, start_date])
 
 
 if __name__ == "__main__":
-    logging.basicConfig(format='[%(asctime)s] ln:%(lineno)d %(levelname)s: %(message)s', datefmt='%I:%M:%s', level=logging.DEBUG)
+    logging.basicConfig(format='[%(asctime)s] ln:%(lineno)d %(levelname)s: %(message)s', datefmt='%I:%M:%s',
+                    level=logging.DEBUG)
 
     for cat in CategoryService.list():
         print(cat.id, cat.name)

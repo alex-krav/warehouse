@@ -385,21 +385,30 @@ class View():
             return
 
         end_date = self.good_end_input.get().strip()
-        if not self.date_pattern.match(end_date):
-            end_date = None 
 
-        term = 0
         try:
+            datetime.strptime(end_date, '%Y-%m-%d')
             term = int(self.good_term_input.get().strip())
             if term < 1:
-                term = None
-        except Exception as ex:
+                messagebox.showwarning(msgbox_title, "Термін не може бути від'ємним")
+                return
+        except ValueError as ex:
             logging.error(ex)
-            term = None
-
-        if not (end_date or term):
-            messagebox.showwarning(msgbox_title, "Введіть кінцеву дату!\nзразку: yyyy-mm-dd\nабо ціле число днів")
+            messagebox.showwarning(msgbox_title, "Введіть кінцеву дату або ціле число днів!\nЗразок: yyyy-mm-dd")
             return
+
+        # term = 0
+        # try:
+        #     term = int(self.good_term_input.get().strip())
+        #     if term < 1:
+        #         term = None
+        # except Exception as ex:
+        #     logging.error(ex)
+        #     term = None
+
+        # if not term:
+        #     messagebox.showwarning(msgbox_title, "Введіть ціле число днів")
+        #     return
 
         try:
             GoodService.edit(good_id, category.id, name, qty, qty_unit, term, end_date)
@@ -490,7 +499,7 @@ class View():
 MAIN
 """
 def main():
-    logging.basicConfig(format='[%(asctime)s] ln:%(lineno)d %(levelname)s: %(message)s', datefmt='%I:%M:%s', level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG)
     logging.info('Програма "{}" працює...'.format(View.title))
 
     root = tk.Tk()
@@ -498,7 +507,7 @@ def main():
     root.geometry('{}x{}'.format(1300, 600))
     gui = View(root)
     root.mainloop()
-    database.close()
+    mysql_db.close()
 
 
 if __name__ == "__main__":

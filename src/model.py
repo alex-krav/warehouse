@@ -1,15 +1,16 @@
 from peewee import *
-from datetime import datetime
 import logging
 
-database = SqliteDatabase('/home/alex-krav/projects/warehouse/data/warehouse.db')
+mysql_db = SqliteDatabase(r'C:\Python staff\django_zalik\warehouse\data\warehouse.db')
+pg_db = PostgresqlDatabase('warehouse', user='daryna', password='password',
+                           host='localhost', port=5432)
 
 
 class BaseModel(Model):
     id = PrimaryKeyField()
 
     class Meta:
-        database = database
+        database = mysql_db
 
 
 class Category(BaseModel):
@@ -27,46 +28,48 @@ class Category(BaseModel):
 
 
 class Good(BaseModel):
-    category = ForeignKeyField(Category, backref='goods')
+    category = ForeignKeyField(Category, backref='goods', on_delete='CASCADE')
     name = CharField()
     quantity = IntegerField()
     quantity_unit = CharField()
     term = IntegerField()
-    end_date = IntegerField()
-    start_date = IntegerField()
+    end_date = DateField(formats=['%Y-%m-%d'])
+    start_date = DateField(formats=['%Y-%m-%d'])
 
     class Meta:
         table_name = 'goods'
 
     def show_start_date(self):
-        return datetime.fromtimestamp(self.start_date).strftime('%Y-%m-%d')
+        return self.start_date
 
     def show_end_date(self):
-        return datetime.fromtimestamp(self.end_date).strftime('%Y-%m-%d')
-        
+        return self.end_date
+
     def show_quantity(self):
         return '{} {}'.format(self.quantity, self.quantity_unit)
 
     def to_string(self):
         return 'Good[id={}, cat_id={}, name={}, qty={}, start={}, term={}, date={}]'.format(
-            self.id, self.category.id, self.name, self.show_quantity(), self.show_start_date(), self.term, self.show_end_date())
+            self.id, self.category.id, self.name, self.show_quantity(), self.show_start_date(), self.term,
+            self.show_end_date())
 
     def __str__(self):
         qty_str = '{}\ {}'.format(self.quantity, self.quantity_unit.replace(' ', '\ '))
-        return '{} {} {} {} {} {}'.format(self.name.replace(' ', '\ '), qty_str, self.show_start_date(), self.show_end_date(), self.term, self.id)
+        return '{} {} {} {} {} {}'.format(self.name.replace(' ', '\ '), qty_str, self.show_start_date(),
+                                          self.show_end_date(), self.term, self.id)
 
 
 def main():
-    logging.basicConfig(format='[%(asctime)s] ln:%(lineno)d %(levelname)s: %(message)s', datefmt='%I:%M:%s', level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG)
 
-    database.connect()
+    mysql_db.connect()
 
     for cat in Category.select().order_by(Category.name).prefetch(Good):
         print(cat.name)
         for good in cat.goods:
-            print(" "*4, good.name)
+            print(" " * 4, good.name)
     print()
-        
+
     for good in Good.select(Good, Category).join(Category, JOIN.INNER).order_by(Good.name):
         print(good.name, "-", good.category.name)
     print()
@@ -78,7 +81,7 @@ def main():
     good = Good[11]
     print(good)
 
-    database.close()
+    mysql_db.close()
 
 
 if __name__ == "__main__":

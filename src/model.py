@@ -1,16 +1,16 @@
 from peewee import *
 import logging
 
-mysql_db = SqliteDatabase('C:\\Python staff\\django_zalik\\warehouse\\data\\warehouse.db')
-pg_db = PostgresqlDatabase('warehouse', user='daryna', password='password',
-                           host='localhost', port=5432)
+sqlite_db = SqliteDatabase(r'/home/alex/projects/warehouse/data/warehouse.db')
+pg_db = PostgresqlDatabase('warehouse', user='admin', password='password', host='localhost', port=5432)
+mysql_db = MySQLDatabase('warehouse', user='admin', password='password', host='localhost', port=6033)
 
 
 class BaseModel(Model):
     id = PrimaryKeyField()
 
     class Meta:
-        database = mysql_db
+        database = sqlite_db
 
 
 class Category(BaseModel):
@@ -62,7 +62,7 @@ class Good(BaseModel):
 def main():
     logging.basicConfig(level=logging.DEBUG)
 
-    mysql_db.connect()
+    sqlite_db.connect()
 
     for cat in Category.select().order_by(Category.name).prefetch(Good):
         print(cat.name)

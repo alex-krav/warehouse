@@ -507,7 +507,7 @@ def main():
     root.geometry('{}x{}'.format(1300, 600))
     gui = View(root)
     root.mainloop()
-    mysql_db.close()
+    sqlite_db.close()
 
 
 if __name__ == "__main__":

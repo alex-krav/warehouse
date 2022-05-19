@@ -131,7 +131,7 @@ class GoodService:
 class ExportService:
     @staticmethod
     def export_sqlite_postgres():
-        # get data from mysqlite
+        # get data from sqlite
         categories = []
         goods = []
         for category in Category.select():
@@ -152,7 +152,27 @@ class ExportService:
 
     @staticmethod
     def export_postgres_mysql():
-        pass
+        # get data from postgres db
+        Category.bind(pg_db)
+        Good.bind(pg_db)
+
+        categories = []
+        goods = []
+        for category in Category.select():
+            category_dict = model_to_dict(category)
+            categories.append(category_dict)
+            for good in category.goods.dicts():
+                goods.append(good)
+
+        # binding models to mysql db
+        Category.bind(mysql_db)
+        Good.bind(mysql_db)
+
+        Category.delete().execute()
+        Good.delete().execute()
+
+        Category.insert_many(categories).execute()
+        Good.insert_many(goods).execute()
 
 
 

@@ -1,7 +1,7 @@
 from peewee import *
 import logging
 
-mysql_db = SqliteDatabase(r'C:\Python staff\django_zalik\warehouse\data\warehouse.db')
+mysql_db = SqliteDatabase('C:\\Python staff\\django_zalik\\warehouse\\data\\warehouse.db')
 pg_db = PostgresqlDatabase('warehouse', user='daryna', password='password',
                            host='localhost', port=5432)
 
@@ -80,8 +80,6 @@ def main():
 
     good = Good[11]
     print(good)
-
-    mysql_db.close()
 
 
 if __name__ == "__main__":

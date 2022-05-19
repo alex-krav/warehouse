@@ -131,38 +131,34 @@ class GoodService:
 class ExportService:
     @staticmethod
     def export_sqlite_postgres():
-        pass
+        # get data from mysqlite
+        categories = []
+        goods = []
+        for category in Category.select():
+            category_dict = model_to_dict(category)
+            categories.append(category_dict)
+            for good in category.goods.dicts():
+                goods.append(good)
+
+        # binding models to postgress db
+        Category.bind(pg_db)
+        Good.bind(pg_db)
+
+        Category.delete().execute()
+        Good.delete().execute()
+
+        Category.insert_many(categories).execute()
+        Good.insert_many(goods).execute()
 
     @staticmethod
     def export_postgres_mysql():
-        for name in pg_db.get_tables():
-            cursor = pg_db.execute_sql(f'DELETE FROM {name}')
-            print(cursor.description)
+        pass
 
-        for category in Category.select():
-            category_dict = model_to_dict(category)
-            id = category_dict.get('id')
-            name = category_dict.get('name')
-            pg_db.execute_sql('INSERT INTO categories (id, name) VALUES (%s, %s)', [id, name])
-            for good in category.goods.dicts():
-                id = good.get('id')
-                category_id = good.get('category')
-                name = good.get('name')
-                quantity = good.get('quantity')
-                quantity_unit = good.get('quantity_unit')
-                term = good.get('term')
-                start_date = good.get('start_date')
-                end_date = good.get('end_date')
-
-                pg_db.execute_sql("""INSERT INTO goods 
-                                  (id,category_id,name,quantity,quantity_unit,term,start_date,end_date) 
-                                  VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
-                                  [id, category_id, name, quantity, quantity_unit, term, end_date, start_date])
 
 
 if __name__ == "__main__":
     logging.basicConfig(format='[%(asctime)s] ln:%(lineno)d %(levelname)s: %(message)s', datefmt='%I:%M:%s',
-                    level=logging.DEBUG)
+                        level=logging.DEBUG)
 
     for cat in CategoryService.list():
         print(cat.id, cat.name)

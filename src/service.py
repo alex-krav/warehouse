@@ -1,10 +1,7 @@
-from model import *
 import logging
-import time
-from datetime import datetime, timezone
-from model import pg_db
-from model import Category, Good
+from datetime import datetime
 from playhouse.shortcuts import model_to_dict
+from model import pg_db, Category, Good, JOIN
 
 
 class ConstraintException(Exception):
@@ -25,7 +22,8 @@ class CategoryService:
         return result.get() if len(result) > 0 else None
 
     def find_except(name: str, id: int) -> Category:
-        result = Category.select().where(Category.id != id).where(Category.name == name.lower()).limit(1)
+        result = Category.select().where(Category.id != id).where(
+                    Category.name == name.lower()).limit(1)
         return result.get() if len(result) > 0 else None
 
     def add(name: str) -> Category:
@@ -59,11 +57,13 @@ class CategoryService:
 
 class GoodService:
     def list(cat_id: int) -> list(Good):
-        query = Good.select(Good, Category).join(Category, JOIN.INNER).where(Category.id == cat_id).order_by(Good.name)
+        query = Good.select(Good, Category).join(Category, JOIN.INNER).where(
+            Category.id == cat_id).order_by(Good.name)
         return list(query)
 
     def get(id: int) -> Good:
-        return Good.select(Good, Category).where(Good.id == id).join(Category, JOIN.INNER).get()
+        return Good.select(Good, Category).where(Good.id == id).join(Category, 
+            JOIN.INNER).get()
 
     def add(category_id: int, name: str, quantity: int, quantity_unit: str,
             start_date: str, term: int, end_date: str) -> Good:
@@ -73,25 +73,28 @@ class GoodService:
         if not name.strip():
             raise ConstraintException("Ім'я не може бути пустим")
         if int(quantity) < 1:
-            raise ConstraintException("Кількість має бути цілим числом")
+            raise ConstraintException('Кількість має бути цілим числом')
         if not quantity_unit.strip():
-            raise ConstraintException("Одиниці виміру не можуть бути пустими")
+            raise ConstraintException('Одиниці виміру не можуть бути пустими')
 
         if not start_date.strip():
-            raise ConstraintException("Початкова дата не може бути пустою")
+            raise ConstraintException('Початкова дата не може бути пустою')
 
         if not end_date.strip():
-            raise ConstraintException("Кінцева не може бути пустою")
+            raise ConstraintException('Кінцева не може бути пустою')
 
         start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
         end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
 
         if start_date_obj >= end_date_obj:
-            raise ConstraintException("Кінцева дата має бути більше за початкову дату")
+            raise ConstraintException('Кінцева дата має бути більше за \
+                початкову дату')
 
         return Good.create(category=category,
-                           name=name.strip(), quantity=int(quantity), quantity_unit=quantity_unit.strip(),
-                           start_date=start_date, end_date=end_date, term=int(term))
+                           name=name.strip(), quantity=int(quantity), 
+                           quantity_unit=quantity_unit.strip(),
+                           start_date=start_date, end_date=end_date, 
+                           term=int(term))
 
     def edit(id: int, category_id: int = None, name: str = None, quantity: int = None,
              quantity_unit: str = None, term: int = None, end_date: str = None) -> bool:
@@ -115,7 +118,8 @@ class GoodService:
             end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
 
             if start_date_obj >= end_date_obj:
-                raise ConstraintException("Кінцева дата має бути більше за початкову дату")
+                raise ConstraintException('Кінцева дата має бути більше за \
+                    початкову дату')
 
             good.end_date = end_date
 
@@ -176,9 +180,10 @@ class ExportService:
 
 
 
-if __name__ == "__main__":
-    logging.basicConfig(format='[%(asctime)s] ln:%(lineno)d %(levelname)s: %(message)s', datefmt='%I:%M:%s',
-                        level=logging.DEBUG)
+if __name__ == '__main__':
+    logging.basicConfig(
+        format='[%(asctime)s] ln:%(lineno)d %(levelname)s: %(message)s',
+        datefmt='%I:%M:%s', level=logging.DEBUG)
 
     for cat in CategoryService.list():
         print(cat.id, cat.name)

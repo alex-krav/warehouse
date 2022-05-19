@@ -1,9 +1,13 @@
-from peewee import *
 import logging
+from peewee import SqliteDatabase, PostgresqlDatabase, MySQLDatabase, \
+                   Model, CharField, IntegerField, DateField, \
+                   PrimaryKeyField, ForeignKeyField, JOIN, SQL
 
 sqlite_db = SqliteDatabase(r'/home/alex/projects/warehouse/data/warehouse.db')
-pg_db = PostgresqlDatabase('warehouse', user='admin', password='password', host='localhost', port=5432)
-mysql_db = MySQLDatabase('warehouse', user='admin', password='password', host='localhost', port=6033)
+pg_db = PostgresqlDatabase('warehouse', user='admin', password='password',
+                           host='localhost', port=5432)
+mysql_db = MySQLDatabase('warehouse', user='admin', password='password',
+                         host='localhost', port=6033)
 
 
 class BaseModel(Model):
@@ -50,13 +54,16 @@ class Good(BaseModel):
 
     def to_string(self):
         return 'Good[id={}, cat_id={}, name={}, qty={}, start={}, term={}, date={}]'.format(
-            self.id, self.category.id, self.name, self.show_quantity(), self.show_start_date(), self.term,
-            self.show_end_date())
+            self.id, self.category.id, self.name, self.show_quantity(), 
+            self.show_start_date(), self.term, self.show_end_date())
 
     def __str__(self):
-        qty_str = '{}\ {}'.format(self.quantity, self.quantity_unit.replace(' ', '\ '))
-        return '{} {} {} {} {} {}'.format(self.name.replace(' ', '\ '), qty_str, self.show_start_date(),
-                                          self.show_end_date(), self.term, self.id)
+        qty_str = '{}\ {}'.format(self.quantity,
+                                  self.quantity_unit.replace(' ', '\ '))
+        return '{} {} {} {} {} {}'.format(self.name.replace(' ', '\ '), 
+                                          qty_str, self.show_start_date(),
+                                          self.show_end_date(), self.term, 
+                                          self.id)
 
 
 def main():
@@ -82,5 +89,5 @@ def main():
     print(good)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

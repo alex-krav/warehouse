@@ -1,10 +1,9 @@
-import tkinter as tk
-from tkinter import ttk
-from tkinter import messagebox
 import logging
-from service import *
-from model import *
 import re
+import tkinter as tk
+from tkinter import ttk, messagebox
+from service import CategoryService, GoodService, ExportService
+from model import sqlite_db
 
 
 class View():
@@ -12,7 +11,7 @@ class View():
     INIT
     """
     title = "Управління складом"
-    date_pattern = re.compile("^\d{4}-\d{2}-\d{2}$")
+    date_pattern = re.compile('^\d{4}-\d{2}-\d{2}$')
     catCols = ('Назва', )
     goodCols = ('Назва', 'Кількість', 'Початок', 'Кінець', 'Термін, дн', )
   
@@ -38,25 +37,32 @@ class View():
         self.setup_good_add_frame()
 
     def setup_containers(self):
-        self.cat_list_frame = tk.Frame(self.root, bg='grey', width=1000, height=200, padx=3, pady=3)
-        self.good_list_frame = tk.Frame(self.root, bg='grey', width=1000, height=400, padx=3, pady=3)
-        self.cat_form_frame = tk.Frame(self.root, bg='cyan', width=300, height=200, padx=3, pady=3)
-        self.good_form_frame = tk.Frame(self.root, bg='lavender', width=300, height=400, padx=3, pady=3)
+        self.cat_list_frame = tk.Frame(self.root, bg='grey', width=1000,
+                                       height=200, padx=3, pady=3)
+        self.good_list_frame = tk.Frame(self.root, bg='grey', width=1000,
+                                        height=400, padx=3, pady=3)
+        self.cat_form_frame = tk.Frame(self.root, bg='cyan', width=300,
+                                       height=200, padx=3, pady=3)
+        self.good_form_frame = tk.Frame(self.root, bg='lavender', width=300,
+                                        height=400, padx=3, pady=3)
         # ttk.Separator(self.add_good, orient=tk.HORIZONTAL).grid(column=0, row=0, columnspan=2) #rowspan=1, sticky='ns'
 
         self.root.grid_rowconfigure(0, weight=1)
         self.root.grid_columnconfigure(0, weight=1)
 
-        self.cat_list_frame.grid(row=0, column=0, sticky="nsew") 
-        self.good_list_frame.grid(row=1, column=0, sticky="nsew")
-        self.cat_form_frame.grid(row=0, column=1, sticky="nsew")
-        self.good_form_frame.grid(row=1, column=1, sticky="nsew")
+        self.cat_list_frame.grid(row=0, column=0, sticky='nsew')
+        self.good_list_frame.grid(row=1, column=0, sticky='nsew')
+        self.cat_form_frame.grid(row=0, column=1, sticky='nsew')
+        self.good_form_frame.grid(row=1, column=1, sticky='nsew')
 
     def setup_cat_list_frame(self):
         list_cat_label = tk.Label(self.cat_list_frame, text='Категорії')
-        show_goods_button = tk.Button(self.cat_list_frame, text='Вантажі', command=self.show_category_goods)
-        edit_cat_button = tk.Button(self.cat_list_frame, text='Редагувати', command=self.populate_category_form)
-        del_cat_button = tk.Button(self.cat_list_frame, text='Видалити', command=self.delete_category)
+        show_goods_button = tk.Button(self.cat_list_frame, text='Вантажі',
+                                      command=self.show_category_goods)
+        edit_cat_button = tk.Button(self.cat_list_frame, text='Редагувати',
+                                    command=self.populate_category_form)
+        del_cat_button = tk.Button(self.cat_list_frame, text='Видалити',
+                                   command=self.delete_category)
 
         self.cat_list_frame.grid_rowconfigure(0, weight=1)
         self.cat_list_frame.grid_columnconfigure(0, weight=1)
@@ -71,18 +77,24 @@ class View():
 
     def setup_good_list_frame(self):
         list_good_label = tk.Label(self.good_list_frame, text='Вантажі')
-        edit_good_button = tk.Button(self.good_list_frame, text='Редагувати', command=self.populate_good_form)
-        del_good_button = tk.Button(self.good_list_frame, text='Видалити', command=self.delete_good)
+        edit_good_button = tk.Button(self.good_list_frame, text='Редагувати',
+                                     command=self.populate_good_form)
+        del_good_button = tk.Button(self.good_list_frame, text='Видалити',
+                                    command=self.delete_good)
         export_label = tk.Label(self.good_list_frame, text='Експорт')
-        export_sqlite_postgres_button = tk.Button(self.good_list_frame, text='SQLite ->\nPostgres', command=self.export_sqlite_postgres)
-        export_postgres_mysql_button = tk.Button(self.good_list_frame, text='Postgres\n-> MySQL', command=self.export_postgres_mysql)
+        export_sqlite_postgres_button = tk.Button(self.good_list_frame,
+                                                  text='SQLite ->\nPostgres',
+                                                  command=self.export_sqlite_postgres)
+        export_postgres_mysql_button = tk.Button(self.good_list_frame,
+                                                 text='Postgres\n-> MySQL',
+                                                 command=self.export_postgres_mysql)
 
         self.good_list_frame.grid_rowconfigure(0, weight=1)
         self.good_list_frame.grid_columnconfigure(0, weight=1)
 
-        list_good_label.grid(row=0, column=0, sticky="w")
-        edit_good_button.grid(row=0, column=1, sticky="e")
-        del_good_button.grid(row=0, column=2, sticky="e")
+        list_good_label.grid(row=0, column=0, sticky='w')
+        edit_good_button.grid(row=0, column=1, sticky='e')
+        del_good_button.grid(row=0, column=2, sticky='e')
 
         export_label.grid(row=3, column=0, sticky='w')
         export_sqlite_postgres_button.grid(row=3, column=1, sticky='e')
@@ -94,8 +106,10 @@ class View():
         add_cat_label = tk.Label(self.cat_form_frame, text='Категорія')
         cat_title_label = tk.Label(self.cat_form_frame, text='Назва')
         self.cat_title_input = tk.Entry(self.cat_form_frame)
-        edit_cat_button = tk.Button(self.cat_form_frame, text='Оновити', command=self.edit_category)
-        add_cat_button = tk.Button(self.cat_form_frame, text='Створити', command=self.add_category)
+        edit_cat_button = tk.Button(self.cat_form_frame, text='Оновити',
+                                    command=self.edit_category)
+        add_cat_button = tk.Button(self.cat_form_frame, text='Створити',
+                                   command=self.add_category)
 
         self.cat_form_frame.grid_rowconfigure(0, weight=1)
         self.cat_form_frame.grid_columnconfigure(0, weight=1)
@@ -122,8 +136,10 @@ class View():
         self.good_term_input = tk.Entry(self.good_form_frame)
         good_end_label = tk.Label(self.good_form_frame, text='Дата кінця зберігання')
         self.good_end_input = tk.Entry(self.good_form_frame)
-        edit_cat_button = tk.Button(self.good_form_frame, text='Оновити', command=self.edit_good)
-        add_cat_button = tk.Button(self.good_form_frame, text='Створити', command=self.add_good)
+        edit_cat_button = tk.Button(self.good_form_frame, text='Оновити',
+                                    command=self.edit_good)
+        add_cat_button = tk.Button(self.good_form_frame, text='Створити',
+                                   command=self.add_good)
 
         self.good_form_frame.grid_rowconfigure(0, weight=1)
         self.good_form_frame.grid_columnconfigure(0, weight=1)
@@ -160,9 +176,9 @@ class View():
 
         return tree
 
-    def load_data(self, tree, dataCols, items):
-        for c in dataCols:
-            tree.heading(c, text=c.title())            
+    def load_data(self, tree, data_cols, items):
+        for c in data_cols:
+            tree.heading(c, text=c.title())       
 
         for item in items: 
             tree.insert('', 'end', values=item)
@@ -177,13 +193,18 @@ class View():
         self.load_data(self.catsTree, self.catCols, categories)
 
     def show_categories_dropdown(self, categories):
-        default_cat_name = categories[0].name if len(categories) else ""
+        default_cat_name = categories[0].name if len(categories) else ''
         self.cat_name = default_cat_name
         self.good_cat.set(default_cat_name)
         if len(categories):
-            self.good_cat_select = tk.OptionMenu(self.good_form_frame, self.good_cat, *list(map(lambda cat: cat.name, categories)), command=self.get_dropdown_cat_name)
+            self.good_cat_select = tk.OptionMenu(self.good_form_frame,
+                                                 self.good_cat,
+                                                 *list(map(lambda cat: cat.name, categories)),
+                                                 command=self.get_dropdown_cat_name)
         else:
-            self.good_cat_select = tk.OptionMenu(self.good_form_frame, self.good_cat, [], command=self.get_dropdown_cat_name)    
+            self.good_cat_select = tk.OptionMenu(self.good_form_frame,
+                                                 self.good_cat, [],
+                                                 command=self.get_dropdown_cat_name)  
         self.good_cat_select.grid(row=1, column=1, columnspan=2, sticky='ne')
 
     def refresh_goods(self):
@@ -216,7 +237,7 @@ class View():
         goodValues = self.goodsTree.item(currentGood).get('values')
         good_id = int(goodValues[5])
         return GoodService.get(good_id)
-    
+  
     def empty_good_form(self):
         self.good_id_edit = 0
         self.good_title_input.delete(0, 'end')
@@ -236,7 +257,7 @@ class View():
     def show_category_goods(self):
         cat_id = self.get_selected_category_id()
         if not cat_id:
-            messagebox.showwarning("Вантажі категорії", "Оберіть категорію!")
+            messagebox.showwarning('Вантажі категорії', 'Оберіть категорію!')
             return
         self.cat_id_show_goods = cat_id 
         self.refresh_goods()
@@ -244,26 +265,26 @@ class View():
     def delete_category(self):
         cat_id = self.get_selected_category_id()
         if not cat_id:
-            messagebox.showwarning("Видалення категорії", "Оберіть категорію!")
+            messagebox.showwarning('Видалення категорії', 'Оберіть категорію!')
             return
 
-        answer = messagebox.askquestion("Видалення категорії", "Видалити категорію?")
-        if answer == "no":
+        answer = messagebox.askquestion('Видалення категорії', 'Видалити категорію?')
+        if answer == 'no':
             return
 
         try:
             CategoryService.delete(cat_id)
             self.refresh_categories()
-            logging.info("Видалено категорію id={}".format(cat_id))
-            messagebox.showinfo("Видалення категорії", "Категорію видалено")
+            logging.info('Видалено категорію id={}'.format(cat_id))
+            messagebox.showinfo('Видалення категорії', 'Категорію видалено')
         except Exception as ex:
-            logging.error("Помилка видалення категорії: " + str(ex))
-            messagebox.showerror("Видалення категорії", str(ex))
+            logging.error('Помилка видалення категорії: ' + str(ex))
+            messagebox.showerror('Видалення категорії', str(ex))
 
     def populate_category_form(self):
         cat_id = self.get_selected_category_id()
         if not cat_id:
-            messagebox.showwarning("Редагування категорії", "Оберіть категорію!")
+            messagebox.showwarning('Редагування категорії', 'Оберіть категорію!')
             return
 
         self.cat_id_edit = cat_id
@@ -274,40 +295,40 @@ class View():
         id = self.cat_id_edit
 
         if not id:
-            messagebox.showwarning("Редагування категорії", "Оберіть категорію!")
+            messagebox.showwarning('Редагування категорії', 'Оберіть категорію!')
         elif not name:
-            messagebox.showwarning("Редагування категорії", "Введіть назву!")
+            messagebox.showwarning('Редагування категорії', 'Введіть назву!')
         elif CategoryService.find_except(name, id):
-            messagebox.showwarning("Редагування категорії", "Така категорія вже є!")
+            messagebox.showwarning('Редагування категорії', 'Така категорія вже є!')
         else:
             try:
                 CategoryService.edit(id, name)
                 self.cat_id_edit = 0
                 self.cat_title_input.delete(0, 'end')
                 self.refresh_categories()
-                logging.info("Оновлено категорію: id={}, name={}".format(id, name))
-                messagebox.showinfo("Редагування категорії", "Категорію оновлено")
+                logging.info('Оновлено категорію: id={}, name={}'.format(id, name))
+                messagebox.showinfo('Редагування категорії', 'Категорію оновлено')
             except Exception as ex:
-                logging.error("Помилка оновлення категорії: " + str(ex))
-                messagebox.showerror("Редагування категорії", str(ex))
+                logging.error('Помилка оновлення категорії: ' + str(ex))
+                messagebox.showerror('Редагування категорії', str(ex))
 
     def add_category(self):
         name = self.cat_title_input.get().strip().lower()
 
         if not name:
-            messagebox.showwarning("Нова категорія", "Введіть назву!")
+            messagebox.showwarning('Нова категорія', 'Введіть назву!')
         elif CategoryService.find(name):
-            messagebox.showwarning("Нова категорія", "Така категорія вже є!")
+            messagebox.showwarning('Нова категорія', 'Така категорія вже є!')
         else:
             try:
                 CategoryService.add(name)
                 self.cat_title_input.delete(0, 'end')
                 self.refresh_categories()
-                logging.info("Створено категорію: name={}".format(name))
-                messagebox.showinfo("Нова категорія", "Категорію створено")
+                logging.info('Створено категорію: name={}'.format(name))
+                messagebox.showinfo('Нова категорія', 'Категорію створено')
             except Exception as ex:
-                logging.error("Помилка створення категорії: " + str(ex))
-                messagebox.showerror("Нова категорія", str(ex))
+                logging.error('Помилка створення категорії: ' + str(ex))
+                messagebox.showerror('Нова категорія', str(ex))
 
     """
     HANLDERS FOR GOODS
@@ -318,7 +339,7 @@ class View():
     def populate_good_form(self):
         good = self.get_selected_good()
         if not good:
-            messagebox.showwarning("Редагування вантажу", "Оберіть вантаж!")
+            messagebox.showwarning('Редагування вантажу', 'Оберіть вантаж!')
             return
 
         self.good_id_edit = good.id
@@ -335,53 +356,55 @@ class View():
     def delete_good(self):
         good = self.get_selected_good()
         if not good:
-            messagebox.showwarning("Видалення вантажу", "Оберіть вантаж!")
+            messagebox.showwarning('Видалення вантажу', 'Оберіть вантаж!')
             return
 
-        answer = messagebox.askquestion("Видалення вантажу", "Видалити вантаж?")
-        if answer == "no":
+        answer = messagebox.askquestion('Видалення вантажу', 'Видалити вантаж?')
+        if answer == 'no':
             return
 
         try:
             GoodService.delete(good.id)
             self.refresh_goods()
-            logging.info("Видалено вантаж: id={}".format(good.id))
-            messagebox.showinfo("Видалення вантажу", "Вантаж видалено")
+            logging.info('Видалено вантаж: id={}'.format(good.id))
+            messagebox.showinfo('Видалення вантажу', 'Вантаж видалено')
         except Exception as ex:
-            logging.error("Помилка видалення вантажу: " + str(ex))
-            messagebox.showerror("Видалення вантажу", str(ex))
+            logging.error('Помилка видалення вантажу: ' + str(ex))
+            messagebox.showerror('Видалення вантажу', str(ex))
 
     def edit_good(self):
-        msgbox_title = "Редагування вантажу"
-        success_msg = "Вантаж оновлено!"
-        error_msg = "Помилка оновлення вантажу"
+        msgbox_title = 'Редагування вантажу'
+        success_msg = 'Вантаж оновлено!'
+        error_msg = 'Помилка оновлення вантажу'
 
         good_id = self.good_id_edit
         if not good_id:
-            messagebox.showwarning(msgbox_title, "Оберіть вантаж!")
+            messagebox.showwarning(msgbox_title, 'Оберіть вантаж!')
             return
 
         cat_name = self.cat_name
         category = CategoryService.find(cat_name)
         if not category:
-            messagebox.showwarning(msgbox_title, "Оберіть категорію!")
+            messagebox.showwarning(msgbox_title, 'Оберіть категорію!')
             return 
 
         name = self.good_title_input.get().strip().lower()
         if not name:
-            messagebox.showwarning(msgbox_title, "Введіть назву!")
+            messagebox.showwarning(msgbox_title, 'Введіть назву!')
             return
 
         qty = 0
         try:
             qty = int(self.good_quantity_input.get().strip())
         except Exception as ex:
-            messagebox.showwarning(msgbox_title, "Введіть кількість\n(ціле число)!")
+            messagebox.showwarning(msgbox_title, 'Введіть кількість\n(ціле \
+                число)!')
             return
 
         qty_unit = self.good_unit_input.get().strip().lower()
         if not qty_unit:
-            messagebox.showwarning(msgbox_title, "Введіть одиницю\nвимірюваня кількості!")
+            messagebox.showwarning(msgbox_title, 'Введіть одиницю\nвимірюваня \
+                кількості!')
             return
 
         end_date = self.good_end_input.get().strip()
@@ -390,11 +413,13 @@ class View():
             datetime.strptime(end_date, '%Y-%m-%d')
             term = int(self.good_term_input.get().strip())
             if term < 1:
-                messagebox.showwarning(msgbox_title, "Термін не може бути від'ємним")
+                messagebox.showwarning(msgbox_title, "Термін не може бути \
+                    від'ємним")
                 return
         except ValueError as ex:
             logging.error(ex)
-            messagebox.showwarning(msgbox_title, "Введіть кінцеву дату або ціле число днів!\nЗразок: yyyy-mm-dd")
+            messagebox.showwarning(msgbox_title, 'Введіть кінцеву дату або \
+                ціле число днів!\nЗразок: yyyy-mm-dd')
             return
 
         # term = 0
@@ -411,48 +436,54 @@ class View():
         #     return
 
         try:
-            GoodService.edit(good_id, category.id, name, qty, qty_unit, term, end_date)
+            GoodService.edit(good_id, category.id, name, qty, qty_unit, term,
+                             end_date)
             self.empty_good_form()
             if category.id == self.cat_id_show_goods:
                 self.refresh_goods()
-            logging.info("Оновлено вантаж: id={}, category_id={}, name={}, qty={}, qty_unit={}, term={}, end_date={}".format(
-                            good_id, category.id, name, qty, qty_unit, term, end_date))
+            logging.info('Оновлено вантаж: id={}, category_id={}, name={}, \
+                qty={}, qty_unit={}, term={}, end_date={}'.format(
+                            good_id, category.id, name, qty, qty_unit, term,
+                            end_date))
             messagebox.showinfo(msgbox_title, success_msg)
         except Exception as ex:
-            logging.error(error_msg + ": " + str(ex))
-            messagebox.showerror(msgbox_title, str(ex))  
+            logging.error(error_msg + ': ' + str(ex))
+            messagebox.showerror(msgbox_title, str(ex))
 
     def add_good(self):
-        msgbox_title = "Новий вантаж"
-        success_msg = "Додано новий вантаж!"
-        error_msg = "Помилка створення вантажу"
+        msgbox_title = 'Новий вантаж'
+        success_msg = 'Додано новий вантаж!'
+        error_msg = 'Помилка створення вантажу'
 
         cat_name = self.cat_name
         category = CategoryService.find(cat_name)
         if not category:
-            messagebox.showwarning(msgbox_title, "Оберіть категорію!")
+            messagebox.showwarning(msgbox_title, 'Оберіть категорію!')
             return 
 
         name = self.good_title_input.get().strip().lower()
         if not name:
-            messagebox.showwarning(msgbox_title, "Введіть назву!")
+            messagebox.showwarning(msgbox_title, 'Введіть назву!')
             return
 
         qty = 0
         try:
             qty = int(self.good_quantity_input.get().strip())
         except Exception as ex:
-            messagebox.showwarning(msgbox_title, "Введіть кількість\n(ціле число)!")
+            messagebox.showwarning(msgbox_title, 'Введіть кількість\n(ціле \
+                число)!')
             return
 
         qty_unit = self.good_unit_input.get().strip().lower()
         if not qty_unit:
-            messagebox.showwarning(msgbox_title, "Введіть одиницю\nвимірюваня кількості!")
+            messagebox.showwarning(msgbox_title, 'Введіть одиницю\nвимірюваня \
+                кількості!')
             return
         
         start_date = self.good_start_input.get().strip()
         if not self.date_pattern.match(start_date):
-            messagebox.showwarning(msgbox_title, "Введіть дату початку!\nзразку: yyyy-mm-dd")
+            messagebox.showwarning(msgbox_title, 'Введіть дату початку!\n\
+                зразку: yyyy-mm-dd')
             return
 
         end_date = self.good_end_input.get().strip()
@@ -469,30 +500,34 @@ class View():
             term = None
 
         if not (end_date or term):
-            messagebox.showwarning(msgbox_title, "Введіть кінцеву дату!\nзразку: yyyy-mm-dd\nабо ціле число днів")
+            messagebox.showwarning(msgbox_title, 'Введіть кінцеву дату!\n\
+                зразку: yyyy-mm-dd\nабо ціле число днів')
             return
 
         try:
-            GoodService.add(category.id, name, qty, qty_unit, start_date, term, end_date)
+            GoodService.add(category.id, name, qty, qty_unit, start_date, term,
+                            end_date)
             self.empty_good_form()
             if category.id == self.cat_id_show_goods:
                 self.refresh_goods()
-            logging.info("Створено вантаж: category_id={}, name={}, qty={}, qty_unit={}, start_date={}, term={}, end_date={}".format(
-                            category.id, name, qty, qty_unit, start_date, term, end_date))
+            logging.info('Створено вантаж: category_id={}, name={}, qty={}, \
+                qty_unit={}, start_date={}, term={}, end_date={}'.format(
+                            category.id, name, qty, qty_unit, start_date, term,
+                            end_date))
             messagebox.showinfo(msgbox_title, success_msg)
         except Exception as ex:
-            logging.error(error_msg + ": " + str(ex))
+            logging.error(error_msg + ': ' + str(ex))
             messagebox.showerror(msgbox_title, str(ex)) 
 
     """
     HANLDERS FOR EXPORT
     """  
     def export_sqlite_postgres(self):
-        logging.info("Експорт з SQLite до PostgreSQL")
+        logging.info('Експорт з SQLite до PostgreSQL')
         ExportService.export_sqlite_postgres()
     
     def export_postgres_mysql(self):
-        logging.info("Експорт з PostgreSQL до MySQL")
+        logging.info('Експорт з PostgreSQL до MySQL')
         ExportService.export_postgres_mysql()
 
 """
@@ -510,5 +545,5 @@ def main():
     sqlite_db.close()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
